@@ -2,106 +2,115 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import plotly.express as px
-import plotly.graph_objects as go
 from io import StringIO
 
 st.set_page_config(page_title="Portfolio Visualizer", layout="wide")
 st.title("📊 Portfolio Visualizer")
 
-# ── Manuální override pro ETF a krypto ──────────────────────────────────────
-# Přidej sem své ETF nebo tokeny a nastav jejich alokaci ručně.
-# Sektor a region se pak NEbudou stahovat z yfinance.
-
+# ── ETF look-through: sektorová a regionální skladba ────────────────────────
 ETF_HOLDINGS = {
     "VUAA.MI": {
         "sectors": {
-            "Technology": 0.3364, "Financial Services": 0.1216,
-            "Communication Services": 0.1050, "Consumer Cyclical": 0.1003,
-            "Healthcare": 0.0949, "Industrials": 0.0848,
-            "Consumer Defensive": 0.0527, "Energy": 0.0402,
-            "Utilities": 0.0255, "Real Estate": 0.0195, "Basic Materials": 0.0191,
+            "Technology": 0.3364,
+            "Financial Services": 0.1216,
+            "Communication Services": 0.1050,
+            "Consumer Cyclical": 0.1003,
+            "Healthcare": 0.0949,
+            "Industrials": 0.0848,
+            "Consumer Defensive": 0.0527,
+            "Energy": 0.0402,
+            "Utilities": 0.0255,
+            "Real Estate": 0.0195,
+            "Basic Materials": 0.0191,
         },
         "regions": {"US": 1.0},
     },
     "EXUS.DE": {
         "sectors": {
-            "Financial Services": 0.2621, "Industrials": 0.1863,
-            "Technology": 0.1011, "Healthcare": 0.0922,
-            "Consumer Cyclical": 0.0709, "Basic Materials": 0.0700,
-            "Consumer Defensive": 0.0637, "Energy": 0.0591,
-            "Communication Services": 0.0403, "Utilities": 0.0373,
+            "Financial Services": 0.2621,
+            "Industrials": 0.1863,
+            "Technology": 0.1011,
+            "Healthcare": 0.0922,
+            "Consumer Cyclical": 0.0709,
+            "Basic Materials": 0.0700,
+            "Consumer Defensive": 0.0637,
+            "Energy": 0.0591,
+            "Communication Services": 0.0403,
+            "Utilities": 0.0373,
             "Real Estate": 0.0169,
         },
         "regions": {
-            "Europe": 0.55, "Asia Pacific": 0.30,
-            "North America": 0.10, "Other": 0.05,
+            "Europe": 0.55,
+            "Asia Pacific": 0.30,
+            "North America": 0.10,
+            "Other": 0.05,
         },
     },
 }
 
+# ── Krypto a ostatní manuální overrides ─────────────────────────────────────
 MANUAL_OVERRIDES = {
     "BTC-USD": {"sector": "Crypto", "region": "Global"},
     "ETH-USD": {"sector": "Crypto", "region": "Global"},
     "SOL-USD": {"sector": "Crypto", "region": "Global"},
 }
 
-# Mapování zemí → regiony
+# ── Mapování zemí → regiony ──────────────────────────────────────────────────
 COUNTRY_TO_REGION = {
-    "United States": "US",
-    "Canada": "North America",
-    "United Kingdom": "Europe",
-    "Germany": "Europe",
-    "France": "Europe",
-    "Netherlands": "Europe",
-    "Switzerland": "Europe",
-    "Sweden": "Europe",
-    "Denmark": "Europe",
-    "Norway": "Europe",
-    "Finland": "Europe",
-    "Italy": "Europe",
-    "Spain": "Europe",
-    "Belgium": "Europe",
-    "Austria": "Europe",
-    "Czech Republic": "Europe",
-    "Japan": "Asia Pacific",
-    "South Korea": "Asia Pacific",
-    "Australia": "Asia Pacific",
-    "China": "Emerging Markets",
-    "India": "Emerging Markets",
-    "Brazil": "Emerging Markets",
-    "Taiwan": "Emerging Markets",
+    "United States": "US", "Canada": "North America",
+    "United Kingdom": "Europe", "Germany": "Europe", "France": "Europe",
+    "Netherlands": "Europe", "Switzerland": "Europe", "Sweden": "Europe",
+    "Denmark": "Europe", "Norway": "Europe", "Finland": "Europe",
+    "Italy": "Europe", "Spain": "Europe", "Belgium": "Europe",
+    "Austria": "Europe", "Czech Republic": "Europe",
+    "Japan": "Asia Pacific", "South Korea": "Asia Pacific", "Australia": "Asia Pacific",
+    "China": "Emerging Markets", "India": "Emerging Markets",
+    "Brazil": "Emerging Markets", "Taiwan": "Emerging Markets",
 }
 
 @st.cache_data(show_spinner=False)
 def fetch_info(ticker: str):
     if ticker in MANUAL_OVERRIDES:
         return MANUAL_OVERRIDES[ticker]
+    if ticker in ETF_HOLDINGS:
+        return {"sector": "ETF", "region": "Various"}
     try:
-        t = yf.Ticker(ticker)
-        info = t.info
-        sector = (info.get("sector")
-                  or info.get("category")
-                  or info.get("quoteType")
-                  or "Unknown")
+        info = yf.Ticker(ticker).info
+        sector = info.get("sector") or info.get("category") or "Unknown"
         country = info.get("country", "")
         region = COUNTRY_TO_REGION.get(country, "Other")
         if sector == "Unknown":
             qt = info.get("quoteType", "")
             if qt == "CRYPTOCURRENCY":
-                sector = "Crypto"
-                region = "Global"
+                sector, region = "Crypto", "Global"
             elif qt == "ETF":
-                sector = "ETF"
-                region = "Global"
+                sector, region = "ETF", "Global"
         return {"sector": sector, "region": region}
     except Exception:
         return {"sector": "Unknown", "region": "Other"}
 
-# ── Sidebar – načtení dat ────────────────────────────────────────────────────
+
+def build_exposure_rows(df: pd.DataFrame):
+    sector_rows = []
+    region_rows = []
+    for _, row in df.iterrows():
+        ticker = row["Ticker"]
+        value = row["Market_Value"]
+        if ticker in ETF_HOLDINGS:
+            for sec, w in ETF_HOLDINGS[ticker]["sectors"].items():
+                sector_rows.append({"Sector": sec, "Market_Value": value * w})
+            for reg, w in ETF_HOLDINGS[ticker]["regions"].items():
+                region_rows.append({"Region": reg, "Market_Value": value * w})
+        else:
+            sector_rows.append({"Sector": row["Sector"], "Market_Value": value})
+            region_rows.append({"Region": row["Region"], "Market_Value": value})
+    return pd.DataFrame(sector_rows), pd.DataFrame(region_rows)
+
+
+# ── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.header("📁 Načtení portfolia")
     upload_mode = st.radio("Zdroj dat", ["Nahrát CSV / Excel", "Zadat ručně"])
-
     df_raw = None
 
     if upload_mode == "Nahrát CSV / Excel":
@@ -110,7 +119,7 @@ with st.sidebar:
 | Ticker | Shares | Buy_Price |
 |--------|--------|-----------|
 | AAPL   | 10     | 150       |
-| VWCE.DE| 5      | 90        |
+| VUAA.MI| 5      | 90        |
 | BTC-USD| 0.1    | 30000     |
 
 *Ticker musí být ve formátu Yahoo Finance.*
@@ -121,28 +130,14 @@ with st.sidebar:
                 df_raw = pd.read_csv(uploaded)
             else:
                 df_raw = pd.read_excel(uploaded)
-
     else:
         st.markdown("Zadej pozice (Ticker, Počet kusů, Nákupní cena):")
-        default_csv = "Ticker,Shares,Buy_Price\nAAPL,10,150\nMSFT,5,300\nVWCE.DE,8,90\nBTC-USD,0.05,40000"
+        default_csv = "Ticker,Shares,Buy_Price\nAAPL,10,150\nMSFT,5,300\nVUAA.MI,8,90\nBTC-USD,0.05,40000"
         raw_text = st.text_area("Data (CSV formát)", value=default_csv, height=180)
         try:
             df_raw = pd.read_csv(StringIO(raw_text))
         except Exception as e:
             st.error(f"Chyba při parsování: {e}")
-
-    st.divider()
-    st.header("⚙️ ETF / Krypto override")
-    st.markdown("Přidej vlastní ticker a jeho kategorii:")
-    custom_ticker  = st.text_input("Ticker (např. VWCE.DE)")
-    custom_sector  = st.text_input("Sektor (např. ETF – World)")
-    custom_region  = st.text_input("Region (např. Global)")
-    if st.button("Přidat override") and custom_ticker:
-        MANUAL_OVERRIDES[custom_ticker.upper()] = {
-            "sector": custom_sector or "Unknown",
-            "region": custom_region or "Other",
-        }
-        st.success(f"Přidáno: {custom_ticker.upper()}")
 
 # ── Hlavní obsah ─────────────────────────────────────────────────────────────
 if df_raw is None:
@@ -156,7 +151,6 @@ if not required_cols.issubset(df_raw.columns):
 
 df_raw["Ticker"] = df_raw["Ticker"].str.strip().str.upper()
 
-# Stažení aktuálních cen
 with st.spinner("Stahuji aktuální ceny a informace o tickerech…"):
     tickers = df_raw["Ticker"].tolist()
     prices = {}
@@ -168,8 +162,6 @@ with st.spinner("Stahuji aktuální ceny a informace o tickerech…"):
             prices[t] = None
 
     df_raw["Current_Price"] = df_raw["Ticker"].map(prices)
-
-    # Pokud chybí Buy_Price, použijeme Current_Price
     if "Buy_Price" not in df_raw.columns:
         df_raw["Buy_Price"] = df_raw["Current_Price"]
 
@@ -178,7 +170,6 @@ with st.spinner("Stahuji aktuální ceny a informace o tickerech…"):
     df_raw["P&L"]          = df_raw["Market_Value"] - df_raw["Cost_Basis"]
     df_raw["P&L_%"]        = (df_raw["P&L"] / df_raw["Cost_Basis"] * 100).round(2)
 
-    # Metadata
     meta = {t: fetch_info(t) for t in tickers}
     df_raw["Sector"] = df_raw["Ticker"].map(lambda t: meta[t]["sector"])
     df_raw["Region"] = df_raw["Ticker"].map(lambda t: meta[t]["region"])
@@ -197,34 +188,45 @@ c4.metric("📌 Pozic",            len(df))
 
 st.divider()
 
-# ── Grafy ─────────────────────────────────────────────────────────────────────
+# ── Look-through expozice ─────────────────────────────────────────────────────
+sector_rows, region_rows = build_exposure_rows(df)
+
+sector_df = sector_rows.groupby("Sector")["Market_Value"].sum().reset_index()
+sector_df["Váha (%)"] = (sector_df["Market_Value"] / total_value * 100).round(2)
+
+region_df = region_rows.groupby("Region")["Market_Value"].sum().reset_index()
+region_df["Váha (%)"] = (region_df["Market_Value"] / total_value * 100).round(2)
+
+# ── Tabs ─────────────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4 = st.tabs(["🌍 Regionální expozice", "🏭 Sektorová expozice", "📋 Pozice", "📉 P&L"])
 
 with tab1:
-    region_df = df.groupby("Region")["Market_Value"].sum().reset_index()
-    region_df["Weight_%"] = (region_df["Market_Value"] / total_value * 100).round(2)
+    etf_list = [t for t in tickers if t in ETF_HOLDINGS]
+    if etf_list:
+        st.caption(f"✅ Look-through aktivní pro: {', '.join(etf_list)}")
     col1, col2 = st.columns([1.2, 1])
     with col1:
         fig = px.pie(region_df, values="Market_Value", names="Region",
-                     title="Regionální expozice (podle hodnoty)",
+                     title="Regionální expozice (look-through)",
                      color_discrete_sequence=px.colors.qualitative.Bold)
         fig.update_traces(textposition="inside", textinfo="percent+label")
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         st.dataframe(
             region_df.sort_values("Market_Value", ascending=False)
-                     .rename(columns={"Market_Value": "Hodnota ($)", "Weight_%": "Váha (%)"}),
+                     .rename(columns={"Market_Value": "Hodnota ($)"}),
             use_container_width=True, hide_index=True
         )
 
 with tab2:
-    sector_df = df.groupby("Sector")["Market_Value"].sum().reset_index()
-    sector_df["Weight_%"] = (sector_df["Market_Value"] / total_value * 100).round(2)
+    etf_list = [t for t in tickers if t in ETF_HOLDINGS]
+    if etf_list:
+        st.caption(f"✅ Look-through aktivní pro: {', '.join(etf_list)}")
     col1, col2 = st.columns([1.2, 1])
     with col1:
         fig = px.bar(sector_df.sort_values("Market_Value", ascending=True),
                      x="Market_Value", y="Sector", orientation="h",
-                     title="Sektorová expozice",
+                     title="Sektorová expozice (look-through)",
                      color="Market_Value",
                      color_continuous_scale="Blues",
                      labels={"Market_Value": "Hodnota ($)", "Sector": "Sektor"})
@@ -232,7 +234,7 @@ with tab2:
     with col2:
         st.dataframe(
             sector_df.sort_values("Market_Value", ascending=False)
-                     .rename(columns={"Market_Value": "Hodnota ($)", "Weight_%": "Váha (%)"}),
+                     .rename(columns={"Market_Value": "Hodnota ($)"}),
             use_container_width=True, hide_index=True
         )
 
@@ -240,6 +242,7 @@ with tab3:
     display_df = df[["Ticker", "Shares", "Buy_Price", "Current_Price",
                       "Market_Value", "Sector", "Region"]].copy()
     display_df["Váha (%)"] = (display_df["Market_Value"] / total_value * 100).round(2)
+    display_df["Look-through"] = display_df["Ticker"].apply(lambda t: "✅" if t in ETF_HOLDINGS else "")
     display_df = display_df.sort_values("Market_Value", ascending=False)
     st.dataframe(display_df.rename(columns={
         "Shares": "Kusů", "Buy_Price": "Nák. cena", "Current_Price": "Akt. cena",
