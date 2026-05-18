@@ -58,13 +58,22 @@ def fetch_info(ticker: str):
     try:
         t = yf.Ticker(ticker)
         info = t.info
-        # yfinance občas vrátí prázdný dict – zkus fast_info jako zálohu
-        sector = (info.get("sector") 
-                  or info.get("category") 
-                  or info.get("quoteType") 
+        sector = (info.get("sector")
+                  or info.get("category")
+                  or info.get("quoteType")
                   or "Unknown")
         country = info.get("country", "")
         region = COUNTRY_TO_REGION.get(country, "Other")
+        if sector == "Unknown":
+            qt = info.get("quoteType", "")
+            if qt == "CRYPTOCURRENCY":
+                sector = "Crypto"
+                region = "Global"
+            elif qt == "ETF":
+                sector = "ETF"
+                region = "Global"
+        return {"sector": sector, "region": region}
+    except Exception:
         return {"sector": "Unknown", "region": "Other"}
 
 # ── Sidebar – načtení dat ────────────────────────────────────────────────────
