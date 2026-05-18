@@ -53,16 +53,18 @@ COUNTRY_TO_REGION = {
 
 @st.cache_data(show_spinner=False)
 def fetch_info(ticker: str):
-    """Stáhne info o tickeru z yfinance, vrátí sektor a region."""
     if ticker in MANUAL_OVERRIDES:
         return MANUAL_OVERRIDES[ticker]
     try:
-        info = yf.Ticker(ticker).info
-        sector = info.get("sector") or info.get("category") or "Unknown"
+        t = yf.Ticker(ticker)
+        info = t.info
+        # yfinance občas vrátí prázdný dict – zkus fast_info jako zálohu
+        sector = (info.get("sector") 
+                  or info.get("category") 
+                  or info.get("quoteType") 
+                  or "Unknown")
         country = info.get("country", "")
         region = COUNTRY_TO_REGION.get(country, "Other")
-        return {"sector": sector, "region": region}
-    except Exception:
         return {"sector": "Unknown", "region": "Other"}
 
 # ── Sidebar – načtení dat ────────────────────────────────────────────────────
