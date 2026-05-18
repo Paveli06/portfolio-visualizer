@@ -12,16 +12,37 @@ st.title("📊 Portfolio Visualizer")
 # Přidej sem své ETF nebo tokeny a nastav jejich alokaci ručně.
 # Sektor a region se pak NEbudou stahovat z yfinance.
 
+ETF_HOLDINGS = {
+    "VUAA.MI": {
+        "sectors": {
+            "Technology": 0.3364, "Financial Services": 0.1216,
+            "Communication Services": 0.1050, "Consumer Cyclical": 0.1003,
+            "Healthcare": 0.0949, "Industrials": 0.0848,
+            "Consumer Defensive": 0.0527, "Energy": 0.0402,
+            "Utilities": 0.0255, "Real Estate": 0.0195, "Basic Materials": 0.0191,
+        },
+        "regions": {"US": 1.0},
+    },
+    "EXUS.DE": {
+        "sectors": {
+            "Financial Services": 0.2621, "Industrials": 0.1863,
+            "Technology": 0.1011, "Healthcare": 0.0922,
+            "Consumer Cyclical": 0.0709, "Basic Materials": 0.0700,
+            "Consumer Defensive": 0.0637, "Energy": 0.0591,
+            "Communication Services": 0.0403, "Utilities": 0.0373,
+            "Real Estate": 0.0169,
+        },
+        "regions": {
+            "Europe": 0.55, "Asia Pacific": 0.30,
+            "North America": 0.10, "Other": 0.05,
+        },
+    },
+}
+
 MANUAL_OVERRIDES = {
-    # Příklady ETF:
-    "VWCE.DE": {"sector": "ETF – World",      "region": "Global"},
-    "CSPX.L":  {"sector": "ETF – S&P 500",    "region": "US"},
-    "EUNL.DE": {"sector": "ETF – World",      "region": "Global"},
-    "IEMM.L":  {"sector": "ETF – Emerging",   "region": "Emerging Markets"},
-    # Krypto:
-    "BTC-USD":  {"sector": "Crypto",           "region": "Global"},
-    "ETH-USD":  {"sector": "Crypto",           "region": "Global"},
-    "SOL-USD":  {"sector": "Crypto",           "region": "Global"},
+    "BTC-USD": {"sector": "Crypto", "region": "Global"},
+    "ETH-USD": {"sector": "Crypto", "region": "Global"},
+    "SOL-USD": {"sector": "Crypto", "region": "Global"},
 }
 
 # Mapování zemí → regiony
