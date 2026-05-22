@@ -46,6 +46,67 @@ ETF_HOLDINGS = {
             "Other": 0.05,
         },
     },
+    "VEA": {
+        "sectors": {
+            "Financial Services": 0.2321,
+            "Industrials": 0.1881,
+            "Technology": 0.1048,
+            "Healthcare": 0.0968,
+            "Consumer Cyclical": 0.0924,
+            "Consumer Defensive": 0.0702,
+            "Basic Materials": 0.0645,
+            "Communication Services": 0.0454,
+            "Energy": 0.0441,
+            "Real Estate": 0.0312,
+            "Utilities": 0.0304,
+        },
+        "regions": {
+            "Europe": 0.47,
+            "Asia Pacific": 0.41,
+            "North America": 0.10,
+            "Other": 0.02,
+        },
+    },
+    "EWY": {
+        "sectors": {
+            "Technology": 0.5151,
+            "Industrials": 0.1821,
+            "Financial Services": 0.1043,
+            "Consumer Cyclical": 0.0753,
+            "Basic Materials": 0.0480,
+            "Communication Services": 0.0320,
+            "Consumer Defensive": 0.0200,
+            "Healthcare": 0.0130,
+            "Energy": 0.0070,
+            "Utilities": 0.0032,
+        },
+        "regions": {
+            "Emerging Markets": 1.0,
+        },
+    },
+    "IEMA.L": {
+        "sectors": {
+            "Technology": 0.3504,
+            "Financial Services": 0.1838,
+            "Consumer Cyclical": 0.0955,
+            "Industrials": 0.0892,
+            "Basic Materials": 0.0691,
+            "Communication Services": 0.0639,
+            "Energy": 0.0386,
+            "Healthcare": 0.0374,
+            "Consumer Defensive": 0.0331,
+            "Utilities": 0.0222,
+            "Real Estate": 0.0168,
+        },
+        "regions": {
+            "Emerging Markets": 0.789,
+            "Middle East": 0.057,
+            "Europe": 0.051,
+            "Latin America": 0.043,
+            "Africa": 0.034,
+            "Other": 0.026,
+        },
+    },
 }
 
 # ── Krypto a ostatní manuální overrides ─────────────────────────────────────
